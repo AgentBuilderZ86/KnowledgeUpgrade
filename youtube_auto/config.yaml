@@ -1,0 +1,36 @@
+channel:
+  niche: "intelligence artificielle et futur du travail"   # <- modifiable
+  langue: "fr"
+  style: "informatif-dynamique"  # narratif | explicatif | top5 | histoire
+  duree_cible_secondes: 480      # 8 minutes
+  upload_schedule: "09:00"       # heure de publication quotidienne
+  tags_permanents: ["IA", "technologie", "futur", "automation"]
+
+production:
+  resolution: [1920, 1080]
+  fps: 30
+  voix_tts: "fr-FR-DeniseNeural"   # voix edge-tts
+  vitesse_voix: 1.0
+  fond_musique: true
+  volume_musique: 0.08
+  burn_subtitles: true
+  whisper_model: "small"           # tiny | base | small | medium | large-v3
+  images_per_segment_seconds: 4    # 1 image toutes les 4 secondes
+  ken_burns: true
+  intro_fade_seconds: 0.5
+  outro_fade_seconds: 1.0
+
+api:
+  pexels_key: "${PEXELS_API_KEY}"
+  pixabay_key: "${PIXABAY_API_KEY}"
+  youtube_credentials: "client_secrets.json"
+  claude_key: "${ANTHROPIC_API_KEY}"   # optionnel si Ollama
+  claude_model: "claude-haiku-3-5"
+  use_ollama: false                     # true = 100% local, 0 API
+  ollama_model: "llama3"
+  ollama_host: "http://localhost:11434"
+
+youtube:
+  category_id: "28"            # 28 = Science & Technology
+  default_privacy: "private"   # private quand schedule defini, sinon public
+  made_for_kids: false
