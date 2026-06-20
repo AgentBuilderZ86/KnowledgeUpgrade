@@ -25,7 +25,7 @@ api:
   pixabay_key: "${PIXABAY_API_KEY}"
   youtube_credentials: "client_secrets.json"
   claude_key: "${ANTHROPIC_API_KEY}"   # optionnel si Ollama
-  claude_model: "claude-3-5-haiku-latest"
+  claude_model: "claude-haiku-4-5-20251001"
   use_ollama: false                     # true = 100% local, 0 API
   ollama_model: "llama3"
   ollama_host: "http://localhost:11434"

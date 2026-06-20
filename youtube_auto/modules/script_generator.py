@@ -96,7 +96,7 @@ class ScriptGenerator:
         api_cfg = config.get("api", {})
         self.use_ollama: bool = bool(api_cfg.get("use_ollama", False))
         self.claude_key: str = api_cfg.get("claude_key", "") or ""
-        self.claude_model: str = api_cfg.get("claude_model", "claude-3-5-haiku-latest")
+        self.claude_model: str = api_cfg.get("claude_model", "claude-haiku-4-5-20251001")
         self.ollama_model: str = api_cfg.get("ollama_model", "llama3")
         self.ollama_host: str = api_cfg.get("ollama_host", "http://localhost:11434")
 
