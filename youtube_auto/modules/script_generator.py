@@ -144,7 +144,7 @@ class ScriptGenerator:
         client = anthropic.Anthropic(api_key=self.claude_key)
         message = client.messages.create(
             model=self.claude_model,
-            max_tokens=4096,
+            max_tokens=8192,
             temperature=0.8,
             system=system,
             messages=[{"role": "user", "content": user}],
