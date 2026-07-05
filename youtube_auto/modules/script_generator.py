@@ -138,30 +138,28 @@ class ScriptGenerator:
         return script
 
     def _call_claude(self, system: str, user: str) -> str:
-        """Appelle l'API Claude et retourne le texte brut de la reponse."""
-        import anthropic
-        import unicodedata
+        """Appelle l'API Claude via requests directement (contourne le bug UTF-8 du SDK)."""
+        import requests
+        import json
 
-        # Translitère les accents français (espace, é, è, ê, etc.) → ASCII-safe
-        def remove_accents(text: str) -> str:
-            if not isinstance(text, str):
-                return text
-            nfd = unicodedata.normalize('NFD', text)
-            return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
-
-        system = remove_accents(system)
-        user = remove_accents(user)
-
-        client = anthropic.Anthropic(api_key=self.claude_key)
-        message = client.messages.create(
-            model=self.claude_model,
-            max_tokens=8192,
-            temperature=0.8,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": self.claude_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+        payload = {
+            "model": self.claude_model,
+            "max_tokens": 8192,
+            "temperature": 0.8,
+            "system": system,
+            "messages": [{"role": "user", "content": user}],
+        }
+        resp = requests.post(url, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
         return "".join(
-            block.text for block in message.content if getattr(block, "type", "") == "text"
+            block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
         )
 
     def _call_ollama(self, system: str, user: str) -> str:
