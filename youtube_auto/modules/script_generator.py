@@ -138,8 +138,8 @@ class ScriptGenerator:
         return script
 
     def _call_claude(self, system: str, user: str) -> str:
-        """Appelle l'API Claude via requests directement (contourne le bug UTF-8 du SDK)."""
-        import requests
+        """Appelle l'API Claude via urllib (UTF-8 natif, pas de bug encoding)."""
+        import urllib.request
         import json
 
         url = "https://api.anthropic.com/v1/messages"
@@ -147,6 +147,7 @@ class ScriptGenerator:
             "x-api-key": self.claude_key,
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
+            "user-agent": "YouTubeAutomationPipeline/1.0",
         }
         payload = {
             "model": self.claude_model,
@@ -155,12 +156,16 @@ class ScriptGenerator:
             "system": system,
             "messages": [{"role": "user", "content": user}],
         }
-        resp = requests.post(url, json=payload, headers=headers, timeout=60)
-        resp.raise_for_status()
-        data = resp.json()
-        return "".join(
-            block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
-        )
+        body = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=60) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                return "".join(
+                    block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"
+                )
+        except Exception as e:
+            raise RuntimeError(f"Claude API error: {e}")
 
     def _call_ollama(self, system: str, user: str) -> str:
         """Appelle Ollama en local et retourne le texte brut de la reponse."""
