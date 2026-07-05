@@ -1,0 +1,54 @@
+channel:
+  niche: "intelligence artificielle et futur du travail"   # <- modifiable
+  langue: "fr"
+  style: "informatif-dynamique"  # narratif | explicatif | top5 | histoire
+  style_guide: ""                # ex. "luxury_lifestyle" (fichier style_guides/*.yaml) = narration courte cinématique
+  duree_cible_secondes: 480      # 8 minutes
+  upload_schedule: "09:00"       # heure de publication quotidienne
+  tags_permanents: ["IA", "technologie", "futur", "automation"]
+
+production:
+  resolution: [1920, 1080]
+  fps: 30
+  voix_tts: "fr-FR-DeniseNeural"   # voix edge-tts
+  vitesse_voix: 1.0
+  fond_musique: true
+  volume_musique: 0.08
+  burn_subtitles: true
+  whisper_model: "small"           # tiny | base | small | medium | large-v3
+  images_per_segment_seconds: 4    # 1 image toutes les 4 secondes
+  custom_images_dir: ""            # dossier de VRAIES photos (client/site) prioritaires sur Pexels
+  silent_mode: false               # true = film contemplatif SANS voix off (texte à l'écran + musique d'ambiance)
+  ken_burns: true
+  intro_fade_seconds: 0.5
+  outro_fade_seconds: 1.0
+
+# Mode TURBO : accélère fortement la génération (idéal Colab/CPU).
+# Quand turbo.enabled = true, ces réglages OVERRIDENT ceux ci-dessus :
+#   - résolution abaissée (720p)
+#   - Ken Burns désactivé (évite le rendu image par image)
+#   - preset d'encodage rapide
+#   - Whisper 'tiny' pour les sous-titres
+#   - codec GPU NVENC si use_gpu = true (nécessite un runtime GPU)
+turbo:
+  enabled: false
+  resolution: [1280, 720]
+  disable_ken_burns: true
+  encode_preset: "ultrafast"    # ultrafast (CPU) | fast (GPU)
+  whisper_model: "tiny"
+  use_gpu: false                 # true = codec h264_nvenc (runtime GPU requis)
+
+api:
+  pexels_key: "${PEXELS_API_KEY}"
+  pixabay_key: "${PIXABAY_API_KEY}"
+  youtube_credentials: "client_secrets.json"
+  claude_key: "${ANTHROPIC_API_KEY}"   # optionnel si Ollama
+  claude_model: "claude-haiku-4-5-20251001"
+  use_ollama: false                     # true = 100% local, 0 API
+  ollama_model: "llama3"
+  ollama_host: "http://localhost:11434"
+
+youtube:
+  category_id: "28"            # 28 = Science & Technology
+  default_privacy: "private"   # private quand schedule defini, sinon public
+  made_for_kids: false

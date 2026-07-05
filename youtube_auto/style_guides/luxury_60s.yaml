@@ -1,0 +1,23 @@
+style_name: "Luxury 60s - Film contemplatif"
+tone: "silencieux, sensoriel, meditatif"
+target_platform: "reel_short"
+
+narrative_pillars:
+  - pillar: "La matiere"
+    keywords: ["pierre", "bois", "chaux", "terre", "texture"]
+  - pillar: "La lumiere"
+    keywords: ["lumiere rasante", "contre-jour", "ombre lente", "grain 35mm"]
+  - pillar: "Le silence"
+    keywords: ["vide", "calme", "immobilite", "retrait"]
+
+visual_language:
+  colorimetry: "natural earthy palette, soft contrast, warm light, 35mm film grain, Kinfolk AD aesthetic"
+  aesthetic: "slow cinematic, macro focus, raking light"
+  mood: "meditatif, epure, premium"
+
+voice_over:
+  tone: "AUCUNE voix off - le texte a l'ecran et le silence portent le film"
+  avoid: ["adjectifs promotionnels", "incroyable", "magnifique", "parfait", "appel a l'action"]
+  prefer: ["mots-matiere", "lumiere", "silence", "poids"]
+
+script_structure: "6 sequences de ~10s. Chaque 'texte_ecran' = 1 a 3 mots MAXIMUM (total <= 15 mots sur toute la video). 'texte_narration' peut rester vide."

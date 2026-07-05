@@ -1,0 +1,23 @@
+style_name: "Luxury Lifestyle"
+tone: "minimaliste, confidentiel, sophistiqué"
+target_platform: "youtube_long"
+
+narrative_pillars:
+  - pillar: "Design & Architecture"
+    keywords: ["minimalisme", "matériaux bruts", "détail architectural", "ligne épurée"]
+  - pillar: "Sérénité & Expérience"
+    keywords: ["silence", "lumière naturelle", "évasion", "plénitude"]
+  - pillar: "Exclusivité & Localisation"
+    keywords: ["connexion au lieu", "storytelling du moment", "intimité"]
+
+visual_language:
+  colorimetry: "warm natural lighting, high-contrast, cinematic"
+  aesthetic: "architectural digest, filmic, 8k"
+  mood: "calme, minimaliste, premium"
+
+voice_over:
+  tone: "calme, conversationnel, poétique"
+  avoid: ["appel à l'action criard", "jargon marketing", "superlatives"]
+  prefer: ["sensoriel", "narratif", "invitation à l'expérience"]
+
+script_structure: "Cinematic Tour (5-8 min) avec consignes B-roll précises"

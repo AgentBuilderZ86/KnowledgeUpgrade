@@ -1,0 +1,30 @@
+# Secrets & credentials
+.env
+client_secrets.json
+token.pickle
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Output & logs (on garde les .gitkeep)
+output/*
+!output/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Assets binaires deposes localement
+assets/music/*
+!assets/music/.gitkeep
+assets/fonts/*
+!assets/fonts/.gitkeep
+assets/backgrounds/*
+!assets/backgrounds/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
