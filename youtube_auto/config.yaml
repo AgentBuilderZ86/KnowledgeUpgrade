@@ -20,6 +20,21 @@ production:
   intro_fade_seconds: 0.5
   outro_fade_seconds: 1.0
 
+# Mode TURBO : accélère fortement la génération (idéal Colab/CPU).
+# Quand turbo.enabled = true, ces réglages OVERRIDENT ceux ci-dessus :
+#   - résolution abaissée (720p)
+#   - Ken Burns désactivé (évite le rendu image par image)
+#   - preset d'encodage rapide
+#   - Whisper 'tiny' pour les sous-titres
+#   - codec GPU NVENC si use_gpu = true (nécessite un runtime GPU)
+turbo:
+  enabled: false
+  resolution: [1280, 720]
+  disable_ken_burns: true
+  encode_preset: "ultrafast"    # ultrafast (CPU) | fast (GPU)
+  whisper_model: "tiny"
+  use_gpu: false                 # true = codec h264_nvenc (runtime GPU requis)
+
 api:
   pexels_key: "${PEXELS_API_KEY}"
   pixabay_key: "${PIXABAY_API_KEY}"

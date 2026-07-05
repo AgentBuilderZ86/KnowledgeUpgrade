@@ -30,6 +30,25 @@ class VideoBuilder:
         self.outro_fade = float(prod.get("outro_fade_seconds", 1.0))
         self.assets_dir = os.path.join(os.path.dirname(__file__), "..", "assets")
 
+        # Réglages d'encodage par défaut (mode qualité).
+        self.codec = "libx264"
+        self.encode_preset = "medium"
+
+        # Mode TURBO : override pour accélérer fortement la génération.
+        turbo = config.get("turbo", {})
+        if turbo.get("enabled", False):
+            t_res = turbo.get("resolution", [1280, 720])
+            self.width, self.height = int(t_res[0]), int(t_res[1])
+            if turbo.get("disable_ken_burns", True):
+                self.ken_burns = False
+            self.encode_preset = turbo.get("encode_preset", "ultrafast")
+            if turbo.get("use_gpu", False):
+                self.codec = "h264_nvenc"
+            logger.info(
+                "Mode TURBO actif : %dx%d, ken_burns=%s, codec=%s, preset=%s",
+                self.width, self.height, self.ken_burns, self.codec, self.encode_preset,
+            )
+
     def build(
         self,
         segments: list,
@@ -101,15 +120,39 @@ class VideoBuilder:
         # Intro fade-in / outro fade-out.
         final = final.fadein(self.intro_fade).fadeout(self.outro_fade)
 
-        final.write_videofile(
-            output_path,
-            fps=self.fps,
-            codec="libx264",
-            audio_codec="aac",
-            preset="medium",
-            threads=os.cpu_count() or 4,
-            logger=None,
+        # NVENC (GPU) n'accepte pas les presets libx264 ; on adapte.
+        nvenc_presets = {"ultrafast": "fast", "medium": "medium", "veryslow": "slow"}
+        preset = (
+            nvenc_presets.get(self.encode_preset, "fast")
+            if self.codec == "h264_nvenc"
+            else self.encode_preset
         )
+        try:
+            final.write_videofile(
+                output_path,
+                fps=self.fps,
+                codec=self.codec,
+                audio_codec="aac",
+                preset=preset,
+                threads=os.cpu_count() or 4,
+                logger="bar",
+            )
+        except Exception as exc:
+            # Repli automatique CPU si NVENC (GPU) indisponible sur le runtime.
+            if self.codec == "h264_nvenc":
+                logger.warning("NVENC indisponible (%s) - repli sur libx264 (CPU).", exc)
+                self.codec = "libx264"
+                final.write_videofile(
+                    output_path,
+                    fps=self.fps,
+                    codec="libx264",
+                    audio_codec="aac",
+                    preset="ultrafast",
+                    threads=os.cpu_count() or 4,
+                    logger="bar",
+                )
+            else:
+                raise
         # Liberation des ressources.
         final.close()
         for clip in segment_clips:

@@ -168,9 +168,14 @@ def run_pipeline(topic: str | None = None, config_path: str | None = None) -> st
 
     # --- 6. Sous-titres ---
     if production.get("burn_subtitles", True):
-        sub = SubtitleEngine(
-            model_size=production.get("whisper_model", "small"), language=langue
+        # Le mode turbo impose un modèle Whisper plus léger.
+        turbo = config.get("turbo", {})
+        whisper_model = (
+            turbo.get("whisper_model", "tiny")
+            if turbo.get("enabled", False)
+            else production.get("whisper_model", "small")
         )
+        sub = SubtitleEngine(model_size=whisper_model, language=langue)
         srt_path = str(work_dir / "subtitles.srt")
         generated = _safe("subtitle_generate", sub.generate_srt, built, srt_path)
         if generated:

@@ -122,6 +122,29 @@ pytest tests/
 
 ---
 
+## 4 bis. Mode TURBO (génération rapide)
+
+Pour accélérer fortement la production (idéal sur Colab ou CPU lent), activez le
+mode turbo dans `config.yaml` :
+
+```yaml
+turbo:
+  enabled: true            # active le mode rapide
+  resolution: [1280, 720]  # 720p au lieu de 1080p (~2x plus rapide)
+  disable_ken_burns: true  # coupe le rendu image par image (gros gain)
+  encode_preset: "ultrafast"
+  whisper_model: "tiny"    # sous-titres plus rapides
+  use_gpu: false           # true = codec GPU h264_nvenc (runtime GPU requis)
+```
+
+Quand `enabled: true`, ces valeurs **remplacent** les réglages de `production`.
+Avec un runtime **GPU** (ex. Colab GPU T4), passez `use_gpu: true` pour l'encodage
+matériel NVENC (3-5x plus rapide). Si NVENC est indisponible, le pipeline bascule
+automatiquement sur l'encodage CPU. Gain typique : une vidéo de 8 min passe de
+~60 min à ~8-12 min.
+
+---
+
 ## 5. Le dossier `output/`
 
 Chaque execution cree un sous-dossier horodate `output/AAAAMMJJ_HHMMSS/` :
