@@ -140,6 +140,15 @@ class ScriptGenerator:
     def _call_claude(self, system: str, user: str) -> str:
         """Appelle l'API Claude et retourne le texte brut de la reponse."""
         import anthropic
+        import os
+
+        # Force UTF-8 sur les headers HTTP
+        os.environ['LC_ALL'] = 'C.UTF-8'
+        os.environ['LANG'] = 'C.UTF-8'
+
+        # Encode explicitement en UTF-8
+        system = system.encode('utf-8').decode('utf-8') if isinstance(system, str) else system
+        user = user.encode('utf-8').decode('utf-8') if isinstance(user, str) else user
 
         client = anthropic.Anthropic(api_key=self.claude_key)
         message = client.messages.create(
