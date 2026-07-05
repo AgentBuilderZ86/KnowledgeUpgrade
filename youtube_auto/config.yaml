@@ -18,6 +18,7 @@ production:
   whisper_model: "small"           # tiny | base | small | medium | large-v3
   images_per_segment_seconds: 4    # 1 image toutes les 4 secondes
   custom_images_dir: ""            # dossier de VRAIES photos (client/site) prioritaires sur Pexels
+  silent_mode: false               # true = film contemplatif SANS voix off (texte à l'écran + musique d'ambiance)
   ken_burns: true
   intro_fade_seconds: 0.5
   outro_fade_seconds: 1.0

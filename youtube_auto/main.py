@@ -138,13 +138,18 @@ def run_pipeline(
     # Tags permanents fusionnes.
     script.tags = list(dict.fromkeys(script.tags + channel.get("tags_permanents", [])))
 
-    # --- 3. Synthese vocale ---
-    tts = TTSEngine(langue=langue)
-    voice = production.get("voix_tts", "fr-FR-DeniseNeural")
-    speed = float(production.get("vitesse_voix", 1.0))
-    audio_dir = str(tmp_dir / "audio")
-    _safe("tts_engine", tts.synthesize_segments, script.segments, audio_dir, voice, speed)
-    audio_files = [seg.audio_path for seg in script.segments if seg.audio_path]
+    # --- 3. Synthese vocale (sautee en mode silencieux) ---
+    silent_mode = bool(production.get("silent_mode", False))
+    if silent_mode:
+        logger.info("Mode silencieux : pas de voix off (film contemplatif).")
+        audio_files: list[str] = []
+    else:
+        tts = TTSEngine(langue=langue)
+        voice = production.get("voix_tts", "fr-FR-DeniseNeural")
+        speed = float(production.get("vitesse_voix", 1.0))
+        audio_dir = str(tmp_dir / "audio")
+        _safe("tts_engine", tts.synthesize_segments, script.segments, audio_dir, voice, speed)
+        audio_files = [seg.audio_path for seg in script.segments if seg.audio_path]
 
     # --- 4. Images ---
     fetcher = ImageFetcher(
@@ -185,8 +190,8 @@ def run_pipeline(
 
     final_video = built
 
-    # --- 6. Sous-titres ---
-    if production.get("burn_subtitles", True):
+    # --- 6. Sous-titres (sautes en mode silencieux : pas de parole) ---
+    if production.get("burn_subtitles", True) and not silent_mode:
         # Le mode turbo impose un modèle Whisper plus léger.
         turbo = config.get("turbo", {})
         whisper_model = (

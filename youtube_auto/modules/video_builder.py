@@ -30,6 +30,12 @@ class VideoBuilder:
         self.outro_fade = float(prod.get("outro_fade_seconds", 1.0))
         self.assets_dir = os.path.join(os.path.dirname(__file__), "..", "assets")
 
+        # Mode silencieux : film contemplatif sans voix off (texte + musique).
+        self.silent = bool(prod.get("silent_mode", False))
+        self.target_duration = int(
+            config.get("channel", {}).get("duree_cible_secondes", 480)
+        )
+
         # Réglages d'encodage par défaut (mode qualité).
         self.codec = "libx264"
         self.encode_preset = "medium"
@@ -79,26 +85,37 @@ class VideoBuilder:
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         segment_clips = []
 
+        # En mode silencieux, chaque segment dure une part egale de la cible.
+        n_seg = max(1, len(segments))
+        silent_seg_duration = self.target_duration / n_seg
+
         for idx, seg in enumerate(segments):
-            audio_path = (
-                audio_files[idx] if idx < len(audio_files) else seg.audio_path
-            )
             images = image_files.get(idx, [])
             if not images:
                 logger.warning("Segment %d sans image - ignore.", idx)
                 continue
 
-            audio_clip = AudioFileClip(audio_path)
-            duration = float(audio_clip.duration)
+            if self.silent:
+                # Pas de voix off : duree fixe, ambiance visuelle.
+                duration = silent_seg_duration
+                audio_clip = None
+            else:
+                audio_path = (
+                    audio_files[idx] if idx < len(audio_files) else seg.audio_path
+                )
+                audio_clip = AudioFileClip(audio_path)
+                duration = float(audio_clip.duration)
 
             per_image = duration / len(images)
             image_clips = [
                 self._make_image_clip(path, per_image) for path in images
             ]
             video = concatenate_videoclips(image_clips, method="compose")
-            video = video.set_duration(duration).set_audio(audio_clip)
+            video = video.set_duration(duration)
+            if audio_clip is not None:
+                video = video.set_audio(audio_clip)
 
-            # Texte a l'ecran (optionnel).
+            # Texte a l'ecran (rendu PIL, sans ImageMagick).
             if getattr(seg, "texte_ecran", ""):
                 video = self._overlay_text(video, seg.texte_ecran, duration)
 
@@ -114,8 +131,13 @@ class VideoBuilder:
         if self.use_music:
             music = self._load_music(final.duration)
             if music is not None:
-                mixed = CompositeAudioClip([final.audio, music])
-                final = final.set_audio(mixed)
+                if final.audio is None:
+                    # Mode silencieux : la musique EST toute la bande-son
+                    # (on remonte son volume car il n'y a pas de voix).
+                    final = final.set_audio(music.volumex(6.0))
+                else:
+                    mixed = CompositeAudioClip([final.audio, music])
+                    final = final.set_audio(mixed)
 
         # Intro fade-in / outro fade-out.
         final = final.fadein(self.intro_fade).fadeout(self.outro_fade)
@@ -190,27 +212,88 @@ class VideoBuilder:
         return max(scale_w, scale_h)
 
     def _overlay_text(self, video, text: str, duration: float):
-        """Superpose un texte court en bas du cadre."""
-        from moviepy.editor import CompositeVideoClip, TextClip
+        """Superpose un texte à l'écran, rendu via PIL (aucune dépendance ImageMagick).
+
+        En mode silencieux, le texte est centré (esthétique Serif minimaliste) et
+        apparaît/disparaît en fondu ; sinon il est placé en bas du cadre.
+        """
+        import numpy as np
+        from moviepy.editor import CompositeVideoClip, ImageClip
+        from PIL import Image, ImageDraw, ImageFont
 
         try:
-            txt = (
-                TextClip(
-                    text,
-                    fontsize=int(self.height * 0.05),
-                    color="white",
-                    stroke_color="black",
-                    stroke_width=2,
-                    method="caption",
-                    size=(int(self.width * 0.8), None),
-                )
+            overlay = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(overlay)
+            font = self._load_text_font(int(self.height * (0.055 if self.silent else 0.048)))
+
+            wrapped = self._wrap_text(draw, text, font, int(self.width * 0.8))
+            line_h = int(self.height * 0.075)
+            block_h = line_h * len(wrapped)
+
+            if self.silent:
+                y = (self.height - block_h) // 2   # centré verticalement
+            else:
+                y = int(self.height * 0.78)
+
+            for line in wrapped:
+                bbox = draw.textbbox((0, 0), line, font=font)
+                w = bbox[2] - bbox[0]
+                x = (self.width - w) // 2
+                # Ombre douce pour la lisibilité sur photo.
+                draw.text((x + 3, y + 3), line, font=font, fill=(0, 0, 0, 160))
+                draw.text((x, y), line, font=font, fill=(255, 255, 255, 235))
+                y += line_h
+
+            txt_clip = (
+                ImageClip(np.array(overlay))
                 .set_duration(duration)
-                .set_position(("center", int(self.height * 0.78)))
+                .set_position("center")
             )
-            return CompositeVideoClip([video, txt], size=(self.width, self.height))
-        except Exception as exc:  # pragma: no cover - ImageMagick requis
-            logger.warning("TextClip indisponible (%s) - texte ecran ignore.", exc)
+            # Fondu lent pour l'esthétique contemplative.
+            fade = min(1.2, duration / 3)
+            txt_clip = txt_clip.crossfadein(fade).crossfadeout(fade)
+            return CompositeVideoClip([video, txt_clip], size=(self.width, self.height))
+        except Exception as exc:
+            logger.warning("Rendu texte échoué (%s) - texte écran ignoré.", exc)
             return video
+
+    @staticmethod
+    def _load_text_font(size: int):
+        """Charge une police (Serif de préférence) pour le texte à l'écran."""
+        from PIL import ImageFont
+
+        candidates = [
+            os.path.join(os.path.dirname(__file__), "..", "assets", "fonts", "serif.ttf"),
+            os.path.join(os.path.dirname(__file__), "..", "assets", "fonts", "title.ttf"),
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/Library/Fonts/Georgia.ttf",
+            "C:\\Windows\\Fonts\\georgia.ttf",
+        ]
+        for path in candidates:
+            try:
+                return ImageFont.truetype(path, size)
+            except Exception:
+                continue
+        return ImageFont.load_default()
+
+    @staticmethod
+    def _wrap_text(draw, text: str, font, max_width: int) -> list[str]:
+        """Découpe le texte pour respecter une largeur maximale."""
+        words = text.split()
+        lines: list[str] = []
+        current = ""
+        for word in words:
+            trial = f"{current} {word}".strip()
+            bbox = draw.textbbox((0, 0), trial, font=font)
+            if bbox[2] - bbox[0] <= max_width or not current:
+                current = trial
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines or [text]
 
     def _load_music(self, duration: float):
         """Charge et boucle une musique de fond depuis assets/music."""
