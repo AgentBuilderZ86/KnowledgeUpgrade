@@ -140,15 +140,17 @@ class ScriptGenerator:
     def _call_claude(self, system: str, user: str) -> str:
         """Appelle l'API Claude et retourne le texte brut de la reponse."""
         import anthropic
-        import os
+        import unicodedata
 
-        # Force UTF-8 sur les headers HTTP
-        os.environ['LC_ALL'] = 'C.UTF-8'
-        os.environ['LANG'] = 'C.UTF-8'
+        # Translitère les accents français (espace, é, è, ê, etc.) → ASCII-safe
+        def remove_accents(text: str) -> str:
+            if not isinstance(text, str):
+                return text
+            nfd = unicodedata.normalize('NFD', text)
+            return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
 
-        # Encode explicitement en UTF-8
-        system = system.encode('utf-8').decode('utf-8') if isinstance(system, str) else system
-        user = user.encode('utf-8').decode('utf-8') if isinstance(user, str) else user
+        system = remove_accents(system)
+        user = remove_accents(user)
 
         client = anthropic.Anthropic(api_key=self.claude_key)
         message = client.messages.create(
@@ -165,6 +167,17 @@ class ScriptGenerator:
     def _call_ollama(self, system: str, user: str) -> str:
         """Appelle Ollama en local et retourne le texte brut de la reponse."""
         import requests
+        import unicodedata
+
+        # Translitère les accents (même approche que Claude)
+        def remove_accents(text: str) -> str:
+            if not isinstance(text, str):
+                return text
+            nfd = unicodedata.normalize('NFD', text)
+            return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+
+        system = remove_accents(system)
+        user = remove_accents(user)
 
         url = f"{self.ollama_host.rstrip('/')}/api/generate"
         payload = {
