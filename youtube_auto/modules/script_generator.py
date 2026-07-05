@@ -142,9 +142,27 @@ class ScriptGenerator:
         import urllib.request
         import json
 
+        # Valide la clé API : elle doit être 100% ASCII.
+        key = (self.claude_key or "").strip()
+        try:
+            key.encode("ascii")
+        except UnicodeEncodeError:
+            raise RuntimeError(
+                "Clé API Anthropic INVALIDE : elle contient des caractères non-ASCII "
+                "(souvent des puces '•' issues d'un copier-coller de la version masquée). "
+                "Recopiez la VRAIE clé depuis console.anthropic.com "
+                "(elle commence par 'sk-ant-api03-' et ne contient que des lettres, "
+                "chiffres, tirets et underscores)."
+            )
+        if not key.startswith("sk-ant-"):
+            raise RuntimeError(
+                f"Clé API Anthropic suspecte (ne commence pas par 'sk-ant-') : "
+                f"'{key[:12]}...'. Vérifiez ANTHROPIC_API_KEY dans votre .env."
+            )
+
         url = "https://api.anthropic.com/v1/messages"
         headers = {
-            "x-api-key": self.claude_key,
+            "x-api-key": key,
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
             "user-agent": "YouTubeAutomationPipeline/1.0",
