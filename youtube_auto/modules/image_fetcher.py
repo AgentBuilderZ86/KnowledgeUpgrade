@@ -23,6 +23,7 @@ class ImageFetcher:
         pixabay_key: str = "",
         resolution: tuple[int, int] = (1920, 1080),
         images_per_segment_seconds: int = 4,
+        custom_images_dir: str = "",
     ) -> None:
         """Initialise le recuperateur d'images.
 
@@ -31,11 +32,47 @@ class ImageFetcher:
             pixabay_key: Cle API Pixabay (gratuite).
             resolution: Resolution cible des slides generees.
             images_per_segment_seconds: 1 image par tranche de N secondes.
+            custom_images_dir: Dossier de photos reelles a utiliser en PRIORITE
+                (ex. photos du site client). Si non vide et rempli, ces images
+                sont distribuees sur les segments au lieu des stocks Pexels.
         """
         self.pexels_key = pexels_key or ""
         self.pixabay_key = pixabay_key or ""
         self.resolution = tuple(resolution)
         self.images_per_segment_seconds = max(1, int(images_per_segment_seconds))
+
+        # Pool d'images personnalisees (vraies photos).
+        self._custom_pool: list[str] = self._load_custom_pool(custom_images_dir)
+        self._custom_cursor = 0
+        if self._custom_pool:
+            logger.info(
+                "%d photo(s) personnalisee(s) chargee(s) depuis %s.",
+                len(self._custom_pool),
+                custom_images_dir,
+            )
+
+    @staticmethod
+    def _load_custom_pool(directory: str) -> list[str]:
+        """Charge la liste triee des images d'un dossier local."""
+        if not directory or not os.path.isdir(directory):
+            return []
+        exts = (".jpg", ".jpeg", ".png", ".webp")
+        files = [
+            os.path.join(directory, f)
+            for f in sorted(os.listdir(directory))
+            if f.lower().endswith(exts)
+        ]
+        return files
+
+    def _next_custom(self, count: int) -> list[str]:
+        """Retourne les `count` prochaines images du pool (en cyclant)."""
+        if not self._custom_pool:
+            return []
+        result: list[str] = []
+        for _ in range(count):
+            result.append(self._custom_pool[self._custom_cursor % len(self._custom_pool)])
+            self._custom_cursor += 1
+        return result
 
     def fetch_for_segment(
         self, query: str, segment_duration: float, output_dir: str
@@ -55,6 +92,16 @@ class ImageFetcher:
         """
         os.makedirs(output_dir, exist_ok=True)
         n_images = max(1, math.ceil(segment_duration / self.images_per_segment_seconds))
+
+        # PRIORITE : photos reelles fournies (site client, dossier local).
+        if self._custom_pool:
+            chosen = self._next_custom(n_images)
+            logger.info(
+                "%d photo(s) reelle(s) utilisee(s) pour le segment '%s'.",
+                len(chosen),
+                query,
+            )
+            return chosen
 
         urls: list[str] = []
         if self.pexels_key:

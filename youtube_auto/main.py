@@ -67,7 +67,12 @@ def _safe(step_name: str, func, *args, **kwargs):
         return None
 
 
-def run_pipeline(topic: str | None = None, config_path: str | None = None) -> str | None:
+def run_pipeline(
+    topic: str | None = None,
+    config_path: str | None = None,
+    images_from: str | None = None,
+    images_dir: str | None = None,
+) -> str | None:
     """Execute le pipeline complet de generation et publication.
 
     Etapes :
@@ -104,6 +109,19 @@ def run_pipeline(topic: str | None = None, config_path: str | None = None) -> st
     tmp_dir.mkdir(parents=True, exist_ok=True)
     logger.info("=== Demarrage du pipeline (run %s) ===", run_id)
 
+    # --- 0. Photos reelles (site client ou dossier local) ---
+    custom_images_dir = images_dir or production.get("custom_images_dir", "") or ""
+    if images_from:
+        from modules.site_scraper import SiteScraper
+
+        site_dir = str(BASE_DIR / "assets" / "site_images")
+        scraped = _safe("site_scraper", SiteScraper().scrape_images, images_from, site_dir)
+        if scraped:
+            custom_images_dir = site_dir
+            logger.info("%d photo(s) du site prêtes pour le montage.", len(scraped))
+        else:
+            logger.warning("Aucune image recuperee depuis %s - repli sur stock.", images_from)
+
     # --- 1. Sujet ---
     if not topic:
         finder = TrendFinder(hl=f"{langue}-{langue.upper()}")
@@ -134,6 +152,7 @@ def run_pipeline(topic: str | None = None, config_path: str | None = None) -> st
         pixabay_key=api.get("pixabay_key", ""),
         resolution=tuple(production.get("resolution", [1920, 1080])),
         images_per_segment_seconds=int(production.get("images_per_segment_seconds", 4)),
+        custom_images_dir=custom_images_dir,
     )
     image_files: dict[int, list[str]] = {}
     for idx, seg in enumerate(script.segments):
@@ -302,6 +321,18 @@ def main() -> None:
     parser.add_argument(
         "--config", type=str, default=None, help="Chemin du config.yaml."
     )
+    parser.add_argument(
+        "--images-from",
+        type=str,
+        default=None,
+        help="URL d'un site dont on récupère les vraies photos (B-roll authentique).",
+    )
+    parser.add_argument(
+        "--images-dir",
+        type=str,
+        default=None,
+        help="Dossier de photos réelles à utiliser au lieu des stocks Pexels.",
+    )
     args = parser.parse_args()
 
     setup_logging()
@@ -313,7 +344,7 @@ def main() -> None:
     elif args.batch and args.batch > 0:
         run_batch(args.batch, args.config)
     else:
-        run_pipeline(args.topic, args.config)
+        run_pipeline(args.topic, args.config, args.images_from, args.images_dir)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ channel:
   niche: "intelligence artificielle et futur du travail"   # <- modifiable
   langue: "fr"
   style: "informatif-dynamique"  # narratif | explicatif | top5 | histoire
+  style_guide: ""                # ex. "luxury_lifestyle" (fichier style_guides/*.yaml) = narration courte cinématique
   duree_cible_secondes: 480      # 8 minutes
   upload_schedule: "09:00"       # heure de publication quotidienne
   tags_permanents: ["IA", "technologie", "futur", "automation"]
@@ -16,6 +17,7 @@ production:
   burn_subtitles: true
   whisper_model: "small"           # tiny | base | small | medium | large-v3
   images_per_segment_seconds: 4    # 1 image toutes les 4 secondes
+  custom_images_dir: ""            # dossier de VRAIES photos (client/site) prioritaires sur Pexels
   ken_burns: true
   intro_fade_seconds: 0.5
   outro_fade_seconds: 1.0

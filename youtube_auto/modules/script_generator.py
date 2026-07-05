@@ -100,6 +100,46 @@ class ScriptGenerator:
         self.ollama_model: str = api_cfg.get("ollama_model", "llama3")
         self.ollama_host: str = api_cfg.get("ollama_host", "http://localhost:11434")
 
+    @staticmethod
+    def _load_style_instructions(style_guide: str) -> str:
+        """Construit des directives supplementaires a partir d'un style guide YAML.
+
+        Args:
+            style_guide: Nom du fichier (sans extension) dans ``style_guides/``.
+
+        Returns:
+            Un bloc d'instructions a ajouter au prompt systeme, ou "" si absent.
+        """
+        if not style_guide:
+            return ""
+        import yaml
+        from pathlib import Path
+
+        path = Path(__file__).parent.parent / "style_guides" / f"{style_guide}.yaml"
+        if not path.exists():
+            logger.warning("Style guide introuvable : %s", path)
+            return ""
+        with path.open(encoding="utf-8") as fh:
+            guide = yaml.safe_load(fh) or {}
+
+        pillars = ", ".join(p.get("pillar", "") for p in guide.get("narrative_pillars", []))
+        vo = guide.get("voice_over", {})
+        colorimetry = guide.get("visual_language", {}).get("colorimetry", "")
+
+        return (
+            f"DIRECTIVES DE STYLE SPECIFIQUES ({guide.get('style_name', style_guide)}) :\n"
+            f"- Ton : {guide.get('tone', '')}. {vo.get('tone', '')}.\n"
+            f"- Piliers narratifs a privilegier : {pillars}.\n"
+            "- NARRATION TRES COURTE : chaque 'texte_narration' doit tenir en 1 a 2 "
+            "phrases MAXIMUM (15-30 mots). Laisse respirer les images. On ne remplit "
+            "PAS tout le temps de parole : le silence et le visuel font partie du recit.\n"
+            "- Langage sensoriel (lumiere, texture, matiere, silence), jamais de jargon "
+            "marketing ni d'appel a l'action criard.\n"
+            f"- 'image_query' en anglais, precis et cinematique (ex. style : {colorimetry}).\n"
+            "- Vise MOINS de segments mais plus longs visuellement (peu de texte, "
+            "beaucoup d'image)."
+        )
+
     def generate(self, topic: str, config: dict[str, Any] | None = None) -> Script:
         """Genere et valide un script complet pour un sujet donne.
 
@@ -115,8 +155,13 @@ class ScriptGenerator:
         duree = channel.get("duree_cible_secondes", 480)
         style = channel.get("style", "informatif-dynamique")
         langue = channel.get("langue", "fr")
+        style_guide = channel.get("style_guide", "")
 
         system = SYSTEM_PROMPT.format(duree=duree, style=style, langue=langue)
+        # Style guide optionnel (ex. luxury_lifestyle) : narration courte, cinématique.
+        extra = self._load_style_instructions(style_guide)
+        if extra:
+            system = f"{system}\n\n{extra}"
         user = USER_PROMPT.format(topic=topic, duree=duree)
 
         if self.use_ollama or not self.claude_key:
